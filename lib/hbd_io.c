@@ -5,8 +5,10 @@
 
 #include <linux/bio.h>
 #include <linux/blk-mq.h>
+#include <linux/blk_types.h>
 #include <linux/blkdev.h>
 #include <linux/printk.h>
+#include <linux/version.h>
 
 #include "hk.h"
 #include "hk_inline.h"
@@ -69,7 +71,7 @@ static void hbd_handle_read(struct hbd_target *t, struct bio *bio)
 
 static void hbd_handle_write(struct hbd_target *t, struct bio *bio)
 {
-	enum req_op op = bio_op(bio);
+	int op = bio_op(bio);
 	int ret;
 
 	if (t->flags & HBD_WR_SHADOW) {
@@ -103,14 +105,24 @@ static bool hbd_read_protected(const struct hbd_target *t)
 	       t->on_read;
 }
 
+static dev_t hbd_bio_dev(struct bio *bio)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+	return bio->bi_bdev->bd_dev;
+#else
+	return MKDEV(bio->bi_disk->major,
+		     bio->bi_disk->first_minor + bio->bi_partno);
+#endif
+}
+
 void __nocfi hbd_bio_wrap(struct bio *bio)
 {
 	struct hbd_target *t;
-	enum req_op op;
+	int op;
 
-	if (!bio || !bio->bi_bdev)
+	if (!bio)
 		goto orig;
-	t = hbd_lookup_dev(bio->bi_bdev->bd_dev);
+	t = hbd_lookup_dev(hbd_bio_dev(bio));
 	if (!t)
 		goto orig;
 

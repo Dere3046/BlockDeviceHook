@@ -4,12 +4,37 @@
  */
 
 #include <linux/bio.h>
+#include <linux/blkdev.h>
+#include <linux/highmem.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <linux/xarray.h>
 
 #include "hbd_shadow.h"
+
+#ifndef PAGE_SECTORS_SHIFT
+#define PAGE_SECTORS_SHIFT (PAGE_SHIFT - SECTOR_SHIFT)
+#endif
+
+static __nocfi char *hbd_kmap(struct page *page)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	return kmap_local_page(page);
+#else
+	return kmap_atomic(page);
+#endif
+}
+
+static __nocfi void hbd_kunmap(char *addr)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	kunmap_local(addr);
+#else
+	kunmap_atomic(addr);
+#endif
+}
 
 struct hbd_shadow *hbd_shadow_alloc(size_t max_pages)
 {
@@ -65,13 +90,13 @@ static void bio_copy_bytes(struct bio *bio, u64 byte_off, void *buf,
 			continue;
 		}
 		take = min((size_t)(end - byte_off), len);
-		base = kmap_local_page(bvec.bv_page);
+		base = hbd_kmap(bvec.bv_page);
 		dst = base + bvec.bv_offset + (byte_off - cur);
 		if (to_bio)
 			memcpy(dst, buf, take);
 		else
 			memcpy(buf, dst, take);
-		kunmap_local(base);
+		hbd_kunmap(base);
 		buf += take;
 		len -= take;
 		byte_off += take;
@@ -98,10 +123,10 @@ static void bio_zero_bytes(struct bio *bio, u64 byte_off, size_t len)
 			continue;
 		}
 		take = min((size_t)(end - byte_off), len);
-		base = kmap_local_page(bvec.bv_page);
+		base = hbd_kmap(bvec.bv_page);
 		dst = base + bvec.bv_offset + (byte_off - cur);
 		memset(dst, 0, take);
-		kunmap_local(base);
+		hbd_kunmap(base);
 		len -= take;
 		byte_off += take;
 		cur = end;

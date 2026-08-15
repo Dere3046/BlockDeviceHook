@@ -41,12 +41,10 @@ static void hbd_close_path(struct hbd_open *o)
 static int hbd_open_path(const char *path, struct hbd_open *o)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-	blk_mode_t mode = BLK_OPEN_READ;
+	o->bdev = blkdev_get_by_path(path, BLK_OPEN_READ, NULL, NULL);
 #else
-	fmode_t mode = FMODE_READ;
+	o->bdev = blkdev_get_by_path(path, FMODE_READ, NULL);
 #endif
-
-	o->bdev = blkdev_get_by_path(path, mode, NULL);
 	if (IS_ERR(o->bdev))
 		return PTR_ERR(o->bdev);
 	return 0;
@@ -54,7 +52,11 @@ static int hbd_open_path(const char *path, struct hbd_open *o)
 
 static void hbd_close_path(struct hbd_open *o)
 {
-	blkdev_put(o->bdev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+	blkdev_put(o->bdev, NULL);
+#else
+	blkdev_put(o->bdev, FMODE_READ);
+#endif
 }
 #endif
 
