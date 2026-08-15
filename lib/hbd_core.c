@@ -305,6 +305,7 @@ int hbd_init(void)
 {
 	int ret;
 
+	hbd_shadow_kmap_init();
 	ret = hbd_io_init();
 	if (ret)
 		return ret;

@@ -12,28 +12,42 @@
 #include <linux/version.h>
 #include <linux/xarray.h>
 
+#include "hk.h"
 #include "hbd_shadow.h"
 
 #ifndef PAGE_SECTORS_SHIFT
 #define PAGE_SECTORS_SHIFT (PAGE_SHIFT - SECTOR_SHIFT)
 #endif
 
+typedef char *(*hbd_kmap_fn)(struct page *page);
+typedef void (*hbd_kunmap_fn)(char *addr);
+
+static hbd_kmap_fn g_kmap;
+static hbd_kunmap_fn g_kunmap;
+
+void hbd_shadow_kmap_init(void)
+{
+	g_kmap = (hbd_kmap_fn)hk_resolve("kmap_local_page");
+	g_kunmap = (hbd_kunmap_fn)hk_resolve("kunmap_local");
+	if (!g_kmap || !g_kunmap) {
+		g_kmap = NULL;
+		g_kunmap = NULL;
+	}
+}
+
 static __nocfi char *hbd_kmap(struct page *page)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-	return kmap_local_page(page);
-#else
+	if (g_kmap)
+		return g_kmap(page);
 	return kmap_atomic(page);
-#endif
 }
 
 static __nocfi void hbd_kunmap(char *addr)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-	kunmap_local(addr);
-#else
-	kunmap_atomic(addr);
-#endif
+	if (g_kunmap)
+		g_kunmap(addr);
+	else
+		kunmap_atomic(addr);
 }
 
 struct hbd_shadow *hbd_shadow_alloc(size_t max_pages)

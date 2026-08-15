@@ -18,6 +18,7 @@ struct hbd_shadow {
 
 struct hbd_shadow *hbd_shadow_alloc(size_t max_pages);
 void hbd_shadow_free(struct hbd_shadow *s);
+void hbd_shadow_kmap_init(void);
 int hbd_shadow_write(struct hbd_shadow *s, struct bio *bio, u64 sect);
 int hbd_shadow_zero(struct hbd_shadow *s, u64 sect, u64 bytes);
 int hbd_shadow_read(struct hbd_shadow *s, struct bio *bio, u64 sect,
