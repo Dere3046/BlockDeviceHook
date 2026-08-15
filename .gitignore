@@ -1,0 +1,12 @@
+out/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+.mod*
+*.symversions
+Module.symvers
+modules.order
+deps/
+test/
