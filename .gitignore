@@ -10,3 +10,4 @@ Module.symvers
 modules.order
 deps/
 test/
+.sdk/
