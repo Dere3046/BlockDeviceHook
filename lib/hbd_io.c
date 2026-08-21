@@ -23,18 +23,6 @@ static struct hk_inline g_sg_inline;
 static hbd_bio_orig_fn g_bio_orig;
 static hbd_sg_orig_fn g_sg_orig;
 
-void hbd_stub_bio(void) __attribute__((naked));
-void hbd_stub_bio(void)
-{
-	__asm__ volatile(".space 96");
-}
-
-void hbd_stub_sg(void) __attribute__((naked));
-void hbd_stub_sg(void)
-{
-	__asm__ volatile(".space 96");
-}
-
 static void hbd_handle_read(struct hbd_target *t, struct bio *bio)
 {
 	u64 sect = bio->bi_iter.bi_sector;
@@ -178,18 +166,18 @@ int hbd_io_init(void)
 	int ret;
 
 	ret = hk_inline_hook(&g_bio_inline, "submit_bio_noacct",
-			     "hbd_stub_bio", "hbd_bio_wrap");
+			     "hbd_bio_wrap");
 	if (ret)
 		return ret;
-	g_bio_orig = (hbd_bio_orig_fn)g_bio_inline.stub;
+	g_bio_orig = (hbd_bio_orig_fn)g_bio_inline.orig;
 
 	ret = hk_inline_hook(&g_sg_inline, "blk_execute_rq",
-			     "hbd_stub_sg", "hbd_sg_wrap");
+			     "hbd_sg_wrap");
 	if (ret) {
 		hk_inline_unhook(&g_bio_inline);
 		return ret;
 	}
-	g_sg_orig = (hbd_sg_orig_fn)g_sg_inline.stub;
+	g_sg_orig = (hbd_sg_orig_fn)g_sg_inline.orig;
 	return 0;
 }
 
