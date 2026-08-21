@@ -20,24 +20,6 @@ static hbd_del_disk_orig_fn g_del_disk_orig;
 static hbd_del_part_orig_fn g_del_part_orig;
 static hbd_disk_changed_orig_fn g_disk_changed_orig;
 
-void hbd_stub_del_disk(void) __attribute__((naked));
-void hbd_stub_del_disk(void)
-{
-	__asm__ volatile(".space 96");
-}
-
-void hbd_stub_del_part(void) __attribute__((naked));
-void hbd_stub_del_part(void)
-{
-	__asm__ volatile(".space 96");
-}
-
-void hbd_stub_disk_changed(void) __attribute__((naked));
-void hbd_stub_disk_changed(void)
-{
-	__asm__ volatile(".space 96");
-}
-
 void __nocfi hbd_del_disk_wrap(struct gendisk *gd)
 {
 	if (gd && hbd_lookup_disk_whole(MKDEV(gd->major, gd->first_minor)))
@@ -65,23 +47,23 @@ int hbd_del_init(void)
 	int ret;
 
 	ret = hk_inline_hook(&g_del_disk_inline, "del_gendisk",
-			     "hbd_stub_del_disk", "hbd_del_disk_wrap");
+			     "hbd_del_disk_wrap");
 	if (ret)
 		return ret;
-	g_del_disk_orig = (hbd_del_disk_orig_fn)g_del_disk_inline.stub;
+	g_del_disk_orig = (hbd_del_disk_orig_fn)g_del_disk_inline.orig;
 
 	ret = hk_inline_hook(&g_del_part_inline, "bdev_del_partition",
-			     "hbd_stub_del_part", "hbd_del_part_wrap");
+			     "hbd_del_part_wrap");
 	if (ret)
 		goto err;
-	g_del_part_orig = (hbd_del_part_orig_fn)g_del_part_inline.stub;
+	g_del_part_orig = (hbd_del_part_orig_fn)g_del_part_inline.orig;
 
 	ret = hk_inline_hook(&g_disk_changed_inline, "bdev_disk_changed",
-			     "hbd_stub_disk_changed", "hbd_disk_changed_wrap");
+			     "hbd_disk_changed_wrap");
 	if (ret)
 		goto err;
 	g_disk_changed_orig =
-		(hbd_disk_changed_orig_fn)g_disk_changed_inline.stub;
+		(hbd_disk_changed_orig_fn)g_disk_changed_inline.orig;
 	return 0;
 
 err:
