@@ -15,6 +15,9 @@
 #include "hbd.h"
 #include "hbd_shadow.h"
 
+void __nocfi hbd_bio_wrap(struct bio *bio);
+blk_status_t __nocfi hbd_sg_wrap(struct request *rq, bool at_head);
+
 typedef void (*hbd_bio_orig_fn)(struct bio *bio);
 typedef blk_status_t (*hbd_sg_orig_fn)(struct request *rq, bool at_head);
 

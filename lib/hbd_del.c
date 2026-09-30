@@ -9,6 +9,10 @@
 #include "hk_inline.h"
 #include "hbd.h"
 
+void __nocfi hbd_del_disk_wrap(struct gendisk *gd);
+int __nocfi hbd_del_part_wrap(struct gendisk *gd, int partno);
+int __nocfi hbd_disk_changed_wrap(struct gendisk *gd, bool invalidate);
+
 typedef void (*hbd_del_disk_orig_fn)(struct gendisk *disk);
 typedef int (*hbd_del_part_orig_fn)(struct gendisk *disk, int partno);
 typedef int (*hbd_disk_changed_orig_fn)(struct gendisk *disk, bool invalidate);
